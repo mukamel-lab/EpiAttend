@@ -55,6 +55,8 @@ parser.add_argument('--side_trunk_depth',default=1,type=int,
                     help='Number of layers of convolution for the side trunk.')
 parser.add_argument('--log_target',default=False,type=str,
                     help='Whether or not to take the log of the target')
+parser.add_argument('--model_architecture',default=False,type=str,choices=['EpiEnformer_SideTrunk','EpiEnformer_TwoStems']
+                    help='Which model architecture to use. This defines the class that will be used from the module "enformer_epiAttend"')
 
 # parser.add_argument('--sample_weights',default="None",
 #                     help='How much weight to give to DMR regions, which have at least one sample with mCG<0.95. If args.sample_weights=None, give all samples equal weight')
@@ -106,7 +108,7 @@ from tqdm import tqdm
 import numpy as np
 import pandas as pd
 
-import enformer_EAM as enf
+import enformer_epiAttend as enf
 import my_enformer as me
 
 datasets={}
@@ -143,7 +145,8 @@ num_warmup_steps = args.num_warmup_steps
 target_learning_rate = args.target_learning_rate
 
 heads_channels = {'target': batch_mc['target'].shape[-1]}
-model = enf.EpiEnformer_SideTrunk(channels=args.nchannels,  # Use 4x fewer channels to train faster.
+
+model = getattr(enf,args.model_architecture)(channels=args.nchannels,  # Use 4x fewer channels to train faster.
                           num_heads=args.num_heads, # 8
                           num_transformer_layers=args.num_transformer_layers, # 11
                           heads_channels = heads_channels,

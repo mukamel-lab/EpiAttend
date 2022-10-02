@@ -259,7 +259,7 @@ class EpiEnformer_SideTrunk(snt.Module):
     return self(x, is_training=False)
 
 
-class Enformer_TwoStems(snt.Module):
+class EpiEnformer_TwoStems(snt.Module):
   """Main model."""
 
   def __init__(self,
