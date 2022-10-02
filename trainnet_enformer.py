@@ -65,8 +65,6 @@ group_st = parser.add_argument_group('Parameters for the EpiEnformer_SideTrunk a
 group_st.add_argument('--side_trunk_depth',default=1,type=int,
                     help='Number of layers of convolution for the side trunk.')
 
-# parser.add_argument('--sample_weights',default="None",
-#                     help='How much weight to give to DMR regions, which have at least one sample with mCG<0.95. If args.sample_weights=None, give all samples equal weight')
 args=parser.parse_args()
 
 args.use_sequence = args.use_sequence.lower()!='false'
@@ -78,10 +76,7 @@ args.predictors_dirs = args.predictors_dirs.split(',')
 
 import time,datetime,os,glob,json
 import socket
-if 'ssrde' in socket.gethostname():
-    basedir='/tuba/datasets/enformer'
-else:
-    basedir='/datasets/enformer'
+basedir='/tuba/datasets/enformer'
 
 today=datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 if args.restart_ckpt is not None:

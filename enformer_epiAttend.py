@@ -272,8 +272,10 @@ class EpiEnformer_TwoStems(snt.Module):
                BIN_SIZE: int = 128,
                sequence_window: int = 114688,
                out_activation: str ='softplus',
-               # side_trunks: list[str] =['atac'],
-               # side_trunk_depth: int = 1,
+
+               ## These inputs are not used:
+               side_trunks: list[str] = None,
+               side_trunk_depth: int = None,
               ):
     """Enformer model.
 
