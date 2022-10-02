@@ -8,22 +8,28 @@ from argparse import ArgumentParser,ArgumentDefaultsHelpFormatter,Namespace
 # Parse command line inputs
 parser = ArgumentParser(
     description="""
-    Train an enformer model with side-inputs
+    Train an enformer model with side-inputs.
+    This version injects the epigenetic signal before the transformer part of the trunk.
     Eran Mukamel (emukamel@ucsd.edu)
     """,
     formatter_class=ArgumentDefaultsHelpFormatter)
+
 parser.add_argument('--predictors_dirs',default='', type=str, 
                     help='Directory (or list of directories) containing the predictors TF dataset.')
 parser.add_argument('--targets_dir',default='', type=str,
                     help='Directory containing targets TF dataset')
 parser.add_argument('--run_id',default='enformer_MLP', type=str,
                     help='Prefix for output files (checkpoints)')
-parser.add_argument('--out_activation',default='sigmoid', type=str,choices=['sigmoid','softplus','linear'],
+parser.add_argument('--log_target',default='False',type=str,
+                    help='Whether or not to take the log of the target')
+parser.add_argument('--use_sequence',default='True', type=str,
+                    help='Whether to use sequence as a predictor')
+parser.add_argument('--only_sequence',default='False', type=str,
+                    help='Whether to use ONLY the sequence as a predictor, ignoring other epigenetic tracks. (Overrides use_sequence).')
+
+
+parser.add_argument('--out_activation',default='sigmoid', type=str,choices=['sigmoid','softplus','linear','relu'],
                     help='Output activation function')
-parser.add_argument('--num_warmup_steps',default=5000, type=int,
-                    help='Number of warmup learning steps during which learning rate linearly ramps up to target rate.')
-parser.add_argument('--target_learning_rate',default=.0005, type=float,
-                    help='Target learning rate')
 parser.add_argument('--num_heads',default=8, type=int,
                     help='Number of heads for internal transformer')
 parser.add_argument('--nchannels',default=1536 // 4, type=int,
@@ -32,31 +38,31 @@ parser.add_argument('--num_transformer_layers',default=11, type=int,
                     help='Number of transformer layers')
 parser.add_argument('--pooling_type',default='max', type=str,
                     help='Type of pooling for internal layers')
-parser.add_argument('--loss',default='mse', type=str,choices=['mse','poisson'],
-                    help='Loss function')
-parser.add_argument('--epochs',default=5000, type=int,
-                    help='Number of training epochs')
-parser.add_argument('--validation_interval',default=30, type=float,
-                    help='Minimum time (seconds) between validation and checkpoint saves')
-parser.add_argument('--validation_steps',default=100, type=float,
-                    help='Max number of steps between validation and checkpoint saves')
-parser.add_argument('--use_sequence',default='True', type=str,
-                    help='Whether to use sequence as a predictor')
-parser.add_argument('--only_sequence',default='False', type=str,
-                    help='Whether to use ONLY the sequence as a predictor, ignoring other epigenetic tracks. (Overrides use_sequence).')
 
-parser.add_argument('--restart_ckpt',default=None,type=str,
-                    help='Name of checkpoint file to use as starting point for initializing model. NOTE: If restarting, the stored arguments will override all the other inputs (except run_id)')
-parser.add_argument('--lr_adjust_factor',default=1,type=float,
+group_learn = parser.add_argument_group('Learning parameters:')
+group_learn.add_argument('--num_warmup_steps',default=5000, type=int,
+                    help='Number of warmup learning steps during which learning rate linearly ramps up to target rate.')
+group_learn.add_argument('--target_learning_rate',default=.0005, type=float,
+                    help='Target learning rate')
+group_learn.add_argument('--loss',default='mse', type=str,choices=['mse','poisson'],
+                    help='Loss function')
+group_learn.add_argument('--epochs',default=5000, type=int,
+                    help='Number of training epochs')
+group_learn.add_argument('--validation_interval',default=30, type=float,
+                    help='Minimum time (seconds) between validation and checkpoint saves')
+group_learn.add_argument('--validation_steps',default=100, type=float,
+                    help='Max number of steps between validation and checkpoint saves')
+group_learn.add_argument('--lr_adjust_factor',default=1,type=float,
                     help='Factor by which to multiply learning rate if the validation loss is not decreasing')
-parser.add_argument('--lr_adjust_patience',default=10,type=int,
+group_learn.add_argument('--lr_adjust_patience',default=10,type=int,
                     help='Patience for learning rate adjustment')
-parser.add_argument('--side_trunk_depth',default=1,type=int,
+
+group_learn.add_argument('--restart_ckpt',default=None,type=str,
+                    help='Name of checkpoint file to use as starting point for initializing model. NOTE: If restarting, the stored arguments will override all the other inputs (except run_id)')
+
+group_st = parser.add_argument_group('Parameters for the EpiEnformer_SideTrunk architecture:')
+group_st.add_argument('--side_trunk_depth',default=1,type=int,
                     help='Number of layers of convolution for the side trunk.')
-parser.add_argument('--log_target',default=False,type=str,
-                    help='Whether or not to take the log of the target')
-parser.add_argument('--model_architecture',default=False,type=str,choices=['EpiEnformer_SideTrunk','EpiEnformer_TwoStems']
-                    help='Which model architecture to use. This defines the class that will be used from the module "enformer_epiAttend"')
 
 # parser.add_argument('--sample_weights',default="None",
 #                     help='How much weight to give to DMR regions, which have at least one sample with mCG<0.95. If args.sample_weights=None, give all samples equal weight')
