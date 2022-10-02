@@ -9,7 +9,6 @@ from argparse import ArgumentParser,ArgumentDefaultsHelpFormatter,Namespace
 parser = ArgumentParser(
     description="""
     Train an enformer model with side-inputs.
-    This version injects the epigenetic signal before the transformer part of the trunk.
     Eran Mukamel (emukamel@ucsd.edu)
     """,
     formatter_class=ArgumentDefaultsHelpFormatter)
@@ -38,6 +37,8 @@ parser.add_argument('--num_transformer_layers',default=11, type=int,
                     help='Number of transformer layers')
 parser.add_argument('--pooling_type',default='max', type=str,
                     help='Type of pooling for internal layers')
+parser.add_argument('--model_architecture',default=False,type=str,choices=['EpiEnformer_SideTrunk','EpiEnformer_TwoStems'],
+                    help='Which model architecture to use. This defines the class that will be used from the module "enformer_epiAttend"')
 
 group_learn = parser.add_argument_group('Learning parameters:')
 group_learn.add_argument('--num_warmup_steps',default=5000, type=int,
