@@ -128,7 +128,7 @@ for t in ['train','valid']:
   targets_dataset = me.get_dataset_targets(args.targets_dir, t)
 
   if args.log_target:
-    datasets[t] = tf.data.Dataset.zip((predictors_datasets,targets_dataset)).map(lambda x,y:{'predictors':x,'target':tf.math.log(1+tf.cast(y,tf.float32)/tf.math.log(10)})
+    datasets[t] = tf.data.Dataset.zip((predictors_datasets,targets_dataset)).map(lambda x,y:{'predictors':x,'target':tf.math.log(1+tf.cast(y,tf.float32))/tf.math.log(10)})
   else:
     datasets[t] = tf.data.Dataset.zip((predictors_datasets,targets_dataset)).map(lambda x,y:{'predictors':x,'target':y})
   datasets[t] = datasets[t].batch(1).repeat().prefetch(2)
