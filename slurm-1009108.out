@@ -1,0 +1,62 @@
+2022-10-03 11:00:47.845409: I tensorflow/compiler/xla/service/service.cc:170] XLA service 0x55ac572a8900 initialized for platform Host (this does not guarantee that XLA will be used). Devices:
+2022-10-03 11:00:47.845907: I tensorflow/compiler/xla/service/service.cc:178]   StreamExecutor device (0): Host, Default Version
+2022-10-03 11:00:48.109897: I tensorflow/compiler/xla/service/service.cc:170] XLA service 0x55ac52e1eb10 initialized for platform CUDA (this does not guarantee that XLA will be used). Devices:
+2022-10-03 11:00:48.109952: I tensorflow/compiler/xla/service/service.cc:178]   StreamExecutor device (0): Quadro P6000, Compute Capability 6.1
+2022-10-03 11:00:48.864931: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1532] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 23676 MB memory:  -> device: 0, name: Quadro P6000, pci bus id: 0000:04:00.0, compute capability: 6.1
+*** Saving checkpoints to: /tuba/datasets/enformer/checkpoints/Atac2RNA_NoSeq_mse_2stems_20221003-110036-0
+**** Running on ssrde-c-401.ucsd.edu
+/home/emukamel/enformer/prepare_training_data/Li2021_mouse_snATAC_binsize128_BasenjiBins
+Traceback (most recent call last):
+  File "/tuba/datasets/enformer/EpiAttend/./trainnet_enformer.py", line 131, in <module>
+    datasets[t] = tf.data.Dataset.zip((predictors_datasets,targets_dataset)).map(lambda x,y:{'predictors':x,'target':tf.math.log(1+y)/tf.math.log(10)})
+  File "/home/emukamel/miniconda3/envs/tf/lib/python3.9/site-packages/tensorflow/python/data/ops/dataset_ops.py", line 2048, in map
+    return MapDataset(self, map_func, preserve_cardinality=True, name=name)
+  File "/home/emukamel/miniconda3/envs/tf/lib/python3.9/site-packages/tensorflow/python/data/ops/dataset_ops.py", line 5243, in __init__
+    self._map_func = structured_function.StructuredFunctionWrapper(
+  File "/home/emukamel/miniconda3/envs/tf/lib/python3.9/site-packages/tensorflow/python/data/ops/structured_function.py", line 271, in __init__
+    self._function = fn_factory()
+  File "/home/emukamel/miniconda3/envs/tf/lib/python3.9/site-packages/tensorflow/python/eager/function.py", line 2567, in get_concrete_function
+    graph_function = self._get_concrete_function_garbage_collected(
+  File "/home/emukamel/miniconda3/envs/tf/lib/python3.9/site-packages/tensorflow/python/eager/function.py", line 2533, in _get_concrete_function_garbage_collected
+    graph_function, _ = self._maybe_define_function(args, kwargs)
+  File "/home/emukamel/miniconda3/envs/tf/lib/python3.9/site-packages/tensorflow/python/eager/function.py", line 2711, in _maybe_define_function
+    graph_function = self._create_graph_function(args, kwargs)
+  File "/home/emukamel/miniconda3/envs/tf/lib/python3.9/site-packages/tensorflow/python/eager/function.py", line 2627, in _create_graph_function
+    func_graph_module.func_graph_from_py_func(
+  File "/home/emukamel/miniconda3/envs/tf/lib/python3.9/site-packages/tensorflow/python/framework/func_graph.py", line 1141, in func_graph_from_py_func
+    func_outputs = python_func(*func_args, **func_kwargs)
+  File "/home/emukamel/miniconda3/envs/tf/lib/python3.9/site-packages/tensorflow/python/data/ops/structured_function.py", line 248, in wrapped_fn
+    ret = wrapper_helper(*args)
+  File "/home/emukamel/miniconda3/envs/tf/lib/python3.9/site-packages/tensorflow/python/data/ops/structured_function.py", line 177, in wrapper_helper
+    ret = autograph.tf_convert(self._func, ag_ctx)(*nested_args)
+  File "/home/emukamel/miniconda3/envs/tf/lib/python3.9/site-packages/tensorflow/python/autograph/impl/api.py", line 692, in wrapper
+    raise e.ag_error_metadata.to_exception(e)
+  File "/home/emukamel/miniconda3/envs/tf/lib/python3.9/site-packages/tensorflow/python/autograph/impl/api.py", line 689, in wrapper
+    return converted_call(f, args, kwargs, options=options)
+  File "/home/emukamel/miniconda3/envs/tf/lib/python3.9/site-packages/tensorflow/python/autograph/impl/api.py", line 439, in converted_call
+    result = converted_f(*effective_args, **kwargs)
+  File "/tmp/__autograph_generated_fileux8rxk20.py", line 5, in <lambda>
+    tf__lam = lambda x, y: ag__.with_function_scope(lambda lscope: {'predictors': x, 'target': ag__.converted_call(tf.math.log, (1 + y,), None, lscope) / ag__.converted_call(tf.math.log, (10,), None, lscope)}, 'lscope', ag__.STD)
+  File "/home/emukamel/miniconda3/envs/tf/lib/python3.9/site-packages/tensorflow/python/autograph/core/function_wrappers.py", line 113, in with_function_scope
+    return thunk(scope)
+  File "/tmp/__autograph_generated_fileux8rxk20.py", line 5, in <lambda>
+    tf__lam = lambda x, y: ag__.with_function_scope(lambda lscope: {'predictors': x, 'target': ag__.converted_call(tf.math.log, (1 + y,), None, lscope) / ag__.converted_call(tf.math.log, (10,), None, lscope)}, 'lscope', ag__.STD)
+  File "/home/emukamel/miniconda3/envs/tf/lib/python3.9/site-packages/tensorflow/python/autograph/impl/api.py", line 331, in converted_call
+    return _call_unconverted(f, args, kwargs, options, False)
+  File "/home/emukamel/miniconda3/envs/tf/lib/python3.9/site-packages/tensorflow/python/autograph/impl/api.py", line 459, in _call_unconverted
+    return f(*args)
+  File "/home/emukamel/miniconda3/envs/tf/lib/python3.9/site-packages/tensorflow/python/ops/gen_math_ops.py", line 5496, in log
+    _, _, _op, _outputs = _op_def_library._apply_op_helper(
+  File "/home/emukamel/miniconda3/envs/tf/lib/python3.9/site-packages/tensorflow/python/framework/op_def_library.py", line 779, in _apply_op_helper
+    _ExtractInputsAndAttrs(op_type_name, op_def, allowed_list_attr_map,
+  File "/home/emukamel/miniconda3/envs/tf/lib/python3.9/site-packages/tensorflow/python/framework/op_def_library.py", line 660, in _ExtractInputsAndAttrs
+    _SatisfiesTypeConstraint(
+  File "/home/emukamel/miniconda3/envs/tf/lib/python3.9/site-packages/tensorflow/python/framework/op_def_library.py", line 58, in _SatisfiesTypeConstraint
+    raise TypeError(
+TypeError: in user code:
+
+    File "/tuba/datasets/enformer/EpiAttend/./trainnet_enformer.py", line 131, in None  *
+        lambda x,y:{'predictors':x,'target':tf.math.log(1+y)/tf.math.log(10)}
+
+    TypeError: Value passed to parameter 'x' has DataType int32 not in list of allowed values: bfloat16, float16, float32, float64, complex64, complex128
+
