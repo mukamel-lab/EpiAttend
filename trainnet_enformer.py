@@ -38,7 +38,10 @@ parser.add_argument('--num_transformer_layers',default=11, type=int,
 parser.add_argument('--pooling_type',default='max', type=str,
                     help='Type of pooling for internal layers')
 parser.add_argument('--model_architecture',default=False,type=str,choices=['EpiEnformer_SideTrunk','EpiEnformer_TwoStems'],
-                    help='Which model architecture to use. This defines the class that will be used from the module "enformer_epiAttend"')
+                    help='''
+  Which model architecture to use. This defines the class that will be used from the module "enformer_epiAttend." 
+    * EpiEnformer_SideTrunk - add the epigenetic data as a side input after the MHA layers
+    * EpiEnformer_TwoStems - add epigenetic data before the MHA layers''')
 
 group_learn = parser.add_argument_group('Learning parameters:')
 group_learn.add_argument('--num_warmup_steps',default=5000, type=int,
