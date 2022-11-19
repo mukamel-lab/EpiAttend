@@ -273,7 +273,7 @@ class EpiEnformer_TwoStems(snt.Module):
                sequence_window: int = 114688,
                out_activation: str ='softplus',
 
-               ## These inputs are not used:
+               ## These inputs are not used; remove them?
                side_trunks: list[str] = None,
                side_trunk_depth: int = None,
               ):
@@ -442,10 +442,6 @@ class EpiEnformer_TwoStems(snt.Module):
   def heads(self):
     return self._heads
 
-  # @property
-  # def side_trunk(self,st_name='side_trunk_1'):
-  #   return self._side_trunk
-  
   def __call__(self, inputs: dict,
                is_training: bool) -> Dict[str, tf.Tensor]:
     # Accepts a dict with multiple input modalities
@@ -506,24 +502,6 @@ class TargetLengthPad1D(snt.Module):
     pads[-2,:] = pad
     pads=tf.constant(pads)
     return tf.pad(inputs,pads)
-
-class TargetLengthPad1D(snt.Module):
-  """Crop sequence to match the desired target length."""
-
-  def __init__(self, target_length: int, name='target_length_crop'):
-    super().__init__(name=name)
-    self._target_length = target_length
-
-  def __call__(self, inputs):
-    pad = (self._target_length - inputs.shape[-2]) // 2
-    if pad < 0:
-      raise ValueError('inputs shorter than target length')
-
-    pads=np.zeros((3,2),dtype=np.int32)
-    pads[-2,:] = pad
-    pads=tf.constant(pads)
-    return tf.pad(inputs,pads)
-
 
 class Sequential(snt.Module):
   """snt.Sequential automatically passing is_training where it exists."""
