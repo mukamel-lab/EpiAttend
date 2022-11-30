@@ -41,7 +41,8 @@ parser.add_argument('--model_architecture',default=False,type=str,choices=['EpiE
                     help='''
   Which model architecture to use. This defines the class that will be used from the module "enformer_epiAttend." 
     * EpiEnformer_SideTrunk - add the epigenetic data as a side input after the MHA layers
-    * EpiEnformer_TwoStems - add epigenetic data before the MHA layers''')
+    * EpiEnformer_TwoStems - add epigenetic data before the MHA layers
+    ''')
 
 group_learn = parser.add_argument_group('Learning parameters:')
 group_learn.add_argument('--num_warmup_steps',default=5000, type=int,
@@ -124,9 +125,14 @@ for t in ['train','valid']:
   else:
     if args.use_sequence:
       predictors_datasets['sequence']=me.get_dataset(args.predictors_dirs[0], t).map(lambda x: x['sequence'])
+
+    ds_list=[]
     for predictor_dir in args.predictors_dirs:
       print(predictor_dir)
-      predictors_datasets[predictor_dir]=me.get_dataset_targets(predictor_dir, t)
+      ds_list.append(me.get_dataset_targets(predictor_dir, t))
+
+    predictors_datasets['epigenetics']=tf.data.Dataset.zip(tuple(ds_list)).map(lambda *x: tf.concat(x, axis=-1))
+
   predictors_datasets = tf.data.Dataset.zip(tuple(predictors_datasets.values()))
   targets_dataset = me.get_dataset_targets(args.targets_dir, t)
 

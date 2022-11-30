@@ -450,6 +450,192 @@ class EpiEnformer_TwoStems(snt.Module):
       if v.shape[1]>10000:
         stem_outs.append(self.sequence_stem(v,is_training=is_training))
       else:
+        stem_outs.append(self.predictor_stem(v,is_training=is_training))
+
+    stem_embedding = tf.concat(stem_outs,
+      axis=-1,name='concat')
+
+    trunk_embedding = self.trunk(stem_embedding,is_training=is_training)
+
+    return {
+        head: head_module(trunk_embedding, is_training=is_training)
+        for head, head_module in self.heads.items()
+    }
+
+  @tf.function(input_signature=[
+      tf.TensorSpec([None, SEQUENCE_LENGTH, 4], tf.float32)])
+  def predict_on_batch(self, x):
+    """Method for SavedModel."""
+    return self(x, is_training=False)
+
+####################
+
+class EpiEnformer_OneCellType(snt.Module):
+  """Main model."""
+
+  def __init__(self,
+               channels: int = 1536,
+               num_transformer_layers: int = 11,
+               num_heads: int = 8,
+               pooling_type: str = 'attention',
+               heads_channels: dict[str, int] = {'human': 5313, 'mouse': 1643},
+               name: str = 'enformer',
+               BIN_SIZE: int = 128,
+               sequence_window: int = 114688,
+               out_activation: str ='softplus',
+
+               ## These inputs are not used; remove them?
+               side_trunks: list[str] = None,
+               side_trunk_depth: int = None,
+              ):
+    """Enformer model.
+
+    Args:
+      channels: Number of convolutional filters and the overall 'width' of the
+        model.
+      num_transformer_layers: Number of transformer layers.
+      num_heads: Number of attention heads.
+      pooling_type: Which pooling function to use. Options: 'attention' or max'.
+      name: Name of sonnet module.
+    """
+    super().__init__(name=name)
+    # pylint: disable=g-complex-comprehension,g-long-lambda,cell-var-from-loop
+    #     heads_channels = {'human': 5313, 'mouse': 1643}  # EAM
+    dropout_rate = 0.4
+    assert channels % num_heads == 0, ('channels needs to be divisible '
+                                       f'by {num_heads}')
+    
+    TARGET_LENGTH = sequence_window // BIN_SIZE
+    whole_attention_kwargs = {
+        'attention_dropout_rate': 0.05,
+        'initializer': None,
+        'key_size': 64,
+        'num_heads': num_heads,
+        'num_relative_position_features': channels // num_heads,
+        'positional_dropout_rate': 0.01,
+        'relative_position_functions': [
+            'positional_features_exponential',
+            'positional_features_central_mask',
+            'positional_features_gamma'
+        ],
+        'relative_positions': True,
+        'scaling': True,
+        'value_size': channels // num_heads,
+        'zero_initialize': True
+    }
+
+    trunk_name_scope = tf.name_scope('trunk')
+    trunk_name_scope.__enter__()
+    # lambda is used in Sequential to construct the module under tf.name_scope.
+    def conv_block(filters, width=1, w_init=None, name='conv_block', **kwargs):
+      return Sequential(lambda: [
+          snt.BatchNorm(create_scale=True,
+                        create_offset=True,
+                        decay_rate=0.9,
+                        scale_init=snt.initializers.Ones()),
+          gelu,
+          snt.Conv1D(filters, width, w_init=w_init, **kwargs)
+      ], name=name)
+
+    stem = Sequential(lambda: [
+        snt.Conv1D(channels // 2, 15),
+        Residual(conv_block(channels // 2, 1, name='pointwise_conv_block')),
+        pooling_module(pooling_type, pool_size=2),
+    ], name='stem')
+
+    predictor_stem = Sequential(lambda: [
+        snt.Conv1D(channels // 2, 15),
+        Residual(conv_block(channels // 2, 1, name='pointwise_conv_block')),
+        TargetLengthPad1D(1024, name='pad_predictors')
+    ], name='predictor_stem')
+    self._predictor_stem = Sequential(lambda: [predictor_stem],name='predictor_stem')
+
+    filter_list = exponential_linspace_int(start=channels // 2, end=channels,
+                                           num=6, divisible_by=128)
+    conv_tower = Sequential(lambda: [
+        Sequential(lambda: [
+            conv_block(num_filters, 5),
+            Residual(conv_block(num_filters, 1, name='pointwise_conv_block')),
+            pooling_module(pooling_type, pool_size=2),
+            ],
+                   name=f'conv_tower_block_{i}')
+        for i, num_filters in enumerate(filter_list)], name='conv_tower')
+
+    # Transformer.
+    def transformer_mlp():
+      return Sequential(lambda: [
+          snt.LayerNorm(axis=-1, create_scale=True, create_offset=True),
+          snt.Linear(channels * 2),
+          snt.Dropout(dropout_rate),
+          tf.nn.relu,
+          snt.Linear(channels),
+          snt.Dropout(dropout_rate)], name='mlp')
+
+    transformer = Sequential(lambda: [
+        Sequential(lambda: [
+            Residual(Sequential(lambda: [
+                snt.LayerNorm(axis=-1,
+                              create_scale=True, create_offset=True,
+                              scale_init=snt.initializers.Ones()),
+                attention_module.MultiheadAttention(**whole_attention_kwargs,
+                                                    name=f'attention_{i}'),
+                snt.Dropout(dropout_rate)], name='mha')),
+            Residual(transformer_mlp())], name=f'transformer_block_{i}')
+        for i in range(num_transformer_layers)], name='transformer')
+
+    crop_final = TargetLengthCrop1D(TARGET_LENGTH, name='target_input')
+
+    final_pointwise = Sequential(lambda: [
+        conv_block(channels * 2, 1),
+        snt.Dropout(dropout_rate / 8),
+        gelu], name='final_pointwise')
+
+    self._sequence_stem = Sequential(lambda: [stem,conv_tower],name='sequence_stem')
+
+    self._trunk = Sequential([snt.Linear(channels), tf.nn.relu, # Use a linear layer to ensure proper input shape for transformer
+                              transformer,
+                              crop_final,
+                              final_pointwise],
+                             name='trunk')
+    trunk_name_scope.__exit__(None, None, None)
+
+    ##### Original heads:
+    with tf.name_scope('heads'):
+      if out_activation.lower()!='linear':
+        outfn=[getattr(tf.nn,out_activation)]
+      else:
+        outfn=[]
+      self._heads = {
+          head: Sequential(
+              lambda: [snt.Linear(num_channels)] + outfn,
+              name=f'head_{head}')
+          for head, num_channels in heads_channels.items()
+      }
+
+  @property
+  def trunk(self):
+    return self._trunk
+
+  @property
+  def sequence_stem(self):
+    return self._sequence_stem
+
+  @property
+  def predictor_stem(self):
+    return self._predictor_stem
+
+  @property
+  def heads(self):
+    return self._heads
+
+  def __call__(self, inputs: dict,
+               is_training: bool) -> Dict[str, tf.Tensor]:
+    # Accepts a dict with multiple input modalities
+    stem_outs=[]
+    for v in inputs:
+      if v.shape[1]>10000:
+        stem_outs.append(self.sequence_stem(v,is_training=is_training))
+      else:
         # pass
         stem_outs.append(self.predictor_stem(v,is_training=is_training))
 
@@ -468,7 +654,6 @@ class EpiEnformer_TwoStems(snt.Module):
   def predict_on_batch(self, x):
     """Method for SavedModel."""
     return self(x, is_training=False)
-
 
 ####################
 
