@@ -470,6 +470,47 @@ class EpiEnformer_TwoStems(snt.Module):
 
 ####################
 
+class EpiEnformer_MLP(tf.keras.models.Sequential):
+  """MLP for relating one modality to another"""
+  def __init__(self,
+               channels: int = 128,
+               heads_channels: dict[str, int] = {'human': 5313, 'mouse': 1643},
+               name: str = 'epiEnformer_MLP',
+               out_activation: str = 'softplus',
+               input_shape: tuple = (116,),
+               # output_units: int = 28,
+               *varargs,**kwargs,
+               ):
+
+    super().__init__(name=name)
+
+    self.add(tf.keras.layers.Dense(
+        units=channels,
+        activation=tf.keras.activations.relu,
+        input_shape=input_shape
+    ))
+    
+    self.add(tf.keras.layers.Dense(
+        units=16,
+        activation=tf.keras.activations.relu,
+    ))
+    
+    self.add(tf.keras.layers.Dense(
+        units=64,
+        activation=tf.keras.activations.relu,
+    ))
+
+    # Output layers.
+    out_activation = eval('tf.keras.activations.'+out_activation)
+        
+    self.add(tf.keras.layers.Dense(
+        units=heads_channels['target'],
+        activation=out_activation,
+    ))
+
+
+####################
+
 class EpiEnformer_OneCellType(snt.Module):
   """Main model."""
 
